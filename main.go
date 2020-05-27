@@ -15,8 +15,8 @@ var (
 	_method = flag.String("method", "GET", "HTTP request method")
 	_token  = flag.String("token", "", "Authorization bearer token")
 	_data   = flag.String("data", "", "Raw body data as string")
-	_n      = flag.Int("n", 100, "Amount of iterations")
-	_c      = flag.Int("c", 5, "Concurrent workers")
+	_n      = flag.Int("n", 1, "Amount of iterations")
+	_c      = flag.Int("c", 1, "Concurrent workers")
 	_v      = flag.Int("v", 1, "Verbosity level [0,1,2]")
 )
 
