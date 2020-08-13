@@ -17,7 +17,7 @@ var (
 	_data   = flag.String("data", "", "Raw body data as string")
 	_n      = flag.Int("n", 1, "Amount of iterations")
 	_c      = flag.Int("c", 1, "Concurrent workers")
-	_v      = flag.Int("v", 1, "Verbosity level [0,1,2]")
+	_v      = flag.Int("v", 1, "Verbosity level [0,1,2,3]")
 )
 
 func main() {
@@ -90,7 +90,7 @@ func worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 		if err != nil {
 			print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
 		}
-		print(3, "R#%d W#%d RESPONSE: %v - %s", i, workerID, resp.StatusCode, string(body))
+		print(3, "R#%d W#%d RESPONSE: %v \n%s", i, workerID, resp.StatusCode, string(body))
 
 		delta := end.Sub(start)
 		print(1, "Request #%d took %+v and returned %d", i, delta, resp.StatusCode)
