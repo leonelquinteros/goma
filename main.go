@@ -25,13 +25,13 @@ func main() {
 	flag.Parse()
 
 	print(1, `Starting goma with the following configuration:
-HTTP method: %s
-URL endpoint: %s
-Data: %s
-Bearer token: %s
-Amount of requests to send: %d
-Concurrent request workers: %d
-Verbosity: %d
+- HTTP method: %s
+- URL endpoint: %s
+- Data: %s
+- Bearer token: %s
+- Amount of requests to send: %d
+- Concurrent request workers: %d
+- Verbosity: %d
 `, *_method, *_url, *_data, *_token, *_n, *_c, *_v)
 
 	// Init sync
