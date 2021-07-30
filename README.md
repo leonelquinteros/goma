@@ -4,25 +4,25 @@
 $ goma -h
 Usage of goma:
   -c int
-        Concurrent workers (default 1)
+    	Concurrent workers (default 1)
   -data string
-        Raw body data as string
-  -h string
-        List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN
+    	Raw body data as string
+  -head string
+    	List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN
   -method string
-        HTTP request method (default "GET")
+    	HTTP request method (default "GET")
   -n int
-        Amount of iterations (default 1)
+    	Amount of iterations (default 1)
   -pass string
-        Basic Auth password
+    	Basic Auth password
   -token string
-        Authorization bearer token
+    	Authorization bearer token
   -url string
-        Endpoint URL to request (default "https://example.com")
+    	Endpoint URL to request (default "https://example.com")
   -user string
-        Basic Auth username
+    	Basic Auth username
   -v int
-        Verbosity level [0,1,2,3] (default 1)
+    	Verbosity level [0,1,2,3] (default 1)
 
 ```
 
