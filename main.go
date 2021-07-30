@@ -18,6 +18,7 @@ var (
 	_token  = flag.String("token", "", "Authorization bearer token")
 	_user   = flag.String("user", "", "Basic Auth username")
 	_pass   = flag.String("pass", "", "Basic Auth password")
+	_host   = flag.String("host", "", "Value for the Host header to be sent in the request")
 	_head   = flag.String("head", "", "List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN")
 	_n      = flag.Int("n", 1, "Amount of iterations")
 	_c      = flag.Int("c", 1, "Concurrent workers")
@@ -34,11 +35,12 @@ func main() {
 - Data: %s
 - Bearer token: %s
 - BasicAuth: %s:%s
+- Host: %s
 - Headers: %s
 - Amount of requests to send: %d
 - Concurrent request workers: %d
 - Verbosity: %d
-`, *_method, *_url, *_data, *_token, *_user, *_pass, *_head, *_n, *_c, *_v)
+`, *_method, *_url, *_data, *_token, *_user, *_pass, *_host, *_head, *_n, *_c, *_v)
 
 	// Init sync
 	var wg sync.WaitGroup
@@ -90,6 +92,11 @@ func worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 		}
 		if *_user != "" && *_pass != "" {
 			req.SetBasicAuth(*_user, *_pass)
+		}
+
+		// Add host
+		if *_host != "" {
+			req.Host = *_host
 		}
 
 		// Add headers
