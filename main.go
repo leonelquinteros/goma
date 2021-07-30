@@ -98,7 +98,7 @@ func worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 			for _, h := range headers {
 				parts := strings.Split(h, ":")
 				if len(parts) > 1 {
-					req.Header.Add(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[0]))
+					req.Header.Add(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
 				}
 			}
 		}
