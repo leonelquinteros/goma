@@ -18,7 +18,7 @@ var (
 	_token  = flag.String("token", "", "Authorization bearer token")
 	_user   = flag.String("user", "", "Basic Auth username")
 	_pass   = flag.String("pass", "", "Basic Auth password")
-	_h      = flag.String("h", "", "List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN")
+	_head   = flag.String("head", "", "List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN")
 	_n      = flag.Int("n", 1, "Amount of iterations")
 	_c      = flag.Int("c", 1, "Concurrent workers")
 	_v      = flag.Int("v", 1, "Verbosity level [0,1,2,3]")
@@ -38,7 +38,7 @@ func main() {
 - Amount of requests to send: %d
 - Concurrent request workers: %d
 - Verbosity: %d
-`, *_method, *_url, *_data, *_token, *_user, *_pass, *_h, *_n, *_c, *_v)
+`, *_method, *_url, *_data, *_token, *_user, *_pass, *_head, *_n, *_c, *_v)
 
 	// Init sync
 	var wg sync.WaitGroup
@@ -93,8 +93,8 @@ func worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 		}
 
 		// Add headers
-		if *_h != "" {
-			headers := strings.Split(*_h, ";")
+		if *_head != "" {
+			headers := strings.Split(*_head, ";")
 			for _, h := range headers {
 				parts := strings.Split(h, ":")
 				if len(parts) > 1 {
