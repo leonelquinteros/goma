@@ -16,11 +16,11 @@ var (
 	_url      = flag.String("url", "https://example.com", "Endpoint URL to request")
 	_method   = flag.String("method", "GET", "HTTP request method")
 	_data     = flag.String("data", "", "Raw body data as string")
-	_token    = flag.String("token", "", "Authorization bearer token")
+	_bearer   = flag.String("bearer", "", "Authorization bearer token")
 	_user     = flag.String("user", "", "Basic Auth username")
 	_pass     = flag.String("pass", "", "Basic Auth password")
 	_host     = flag.String("host", "", "Value for the Host header to be sent in the request")
-	_head     = flag.String("head", "", "List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN")
+	_headers  = flag.String("headers", "", "List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN")
 	_insecure = flag.Bool("insecure", false, "Allow invalid SSL/TLS certificates")
 	_n        = flag.Int("n", 1, "Amount of iterations")
 	_c        = flag.Int("c", 1, "Concurrent workers")
@@ -42,7 +42,7 @@ func main() {
 - Amount of requests to send: %d
 - Concurrent request workers: %d
 - Verbosity: %d
-`, *_method, *_url, *_data, *_token, *_user, *_pass, *_host, *_head, *_n, *_c, *_v)
+`, *_method, *_url, *_data, *_bearer, *_user, *_pass, *_host, *_headers, *_n, *_c, *_v)
 
 	// HTTP client config
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -92,8 +92,8 @@ func worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 		}
 
 		// Add token/Auth
-		if *_token != "" {
-			req.Header.Add("Authorization", "bearer "+*_token)
+		if *_bearer != "" {
+			req.Header.Add("Authorization", "bearer "+*_bearer)
 		}
 		if *_user != "" && *_pass != "" {
 			req.SetBasicAuth(*_user, *_pass)
@@ -105,8 +105,8 @@ func worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 		}
 
 		// Add headers
-		if *_head != "" {
-			headers := strings.Split(*_head, ";")
+		if *_headers != "" {
+			headers := strings.Split(*_headers, ";")
 			for _, h := range headers {
 				parts := strings.Split(h, ":")
 				if len(parts) > 1 {
