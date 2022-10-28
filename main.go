@@ -25,6 +25,7 @@ var (
 	_n        = flag.Int("n", 1, "Amount of iterations")
 	_c        = flag.Int("c", 1, "Concurrent workers")
 	_v        = flag.Int("v", 1, "Verbosity level [0,1,2,3]")
+	_henrique = flag.String("Henrique", "", "7-1 - More Info: https://youtu.be/DUSojCb193U?t=10")
 )
 
 func main() {
