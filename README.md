@@ -27,6 +27,8 @@ Usage of goma:
     	Basic Auth username
   -v int
     	Verbosity level [0,1,2,3] (default 1)
+  -henrique string
+      7-1 (More Info: https://youtu.be/DUSojCb193U?t=10)
 
 ```
 
