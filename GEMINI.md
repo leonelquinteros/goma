@@ -5,7 +5,7 @@ Goma is a lightweight, concurrent HTTP benchmarking and load-testing tool writte
 ## Project Overview
 
 - **Purpose:** Simple CLI tool for HTTP request performance testing.
-- **Language:** Go (1.14+ in `go.mod`, 1.23 used in CI).
+- **Language:** Go (1.23+ in `go.mod`).
 - **Core Dependencies:** Standard library (`net/http`, `sync`, `flag`, etc.).
 
 ## Architecture
