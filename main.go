@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"crypto/tls"
 	"flag"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,56 +12,84 @@ import (
 	"time"
 )
 
-var (
-	_url      = flag.String("url", "https://example.com", "Endpoint URL to request")
-	_method   = flag.String("method", "GET", "HTTP request method")
-	_data     = flag.String("data", "", "Raw body data as string")
-	_bearer   = flag.String("bearer", "", "Authorization bearer token")
-	_user     = flag.String("user", "", "Basic Auth username")
-	_pass     = flag.String("pass", "", "Basic Auth password")
-	_host     = flag.String("host", "", "Value for the Host header to be sent in the request")
-	_headers  = flag.String("headers", "", "List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN")
-	_insecure = flag.Bool("insecure", false, "Allow invalid SSL/TLS certificates")
-	_n        = flag.Int("n", 1, "Amount of iterations")
-	_c        = flag.Int("c", 1, "Concurrent workers")
-	_v        = flag.Int("v", 1, "Verbosity level [0,1,2,3]")
-)
+// Config holds the configuration for the goma tool
+type Config struct {
+	URL      string
+	Method   string
+	Data     string
+	Bearer   string
+	User     string
+	Pass     string
+	Host     string
+	Headers  string
+	Insecure bool
+	N        int
+	C        int
+	V        int
+}
 
-func main() {
-	// Parse config params
-	flag.Parse()
+// Runner manages the execution of the benchmark
+type Runner struct {
+	Config *Config
+	Client *http.Client
+}
 
-	print(1, `Starting goma with the following configuration:
-- HTTP method: %s
-- URL endpoint: %s
-- Data: %s
-- Bearer token: %s
-- BasicAuth: %s:%s
-- Host: %s
-- Headers: %s
-- Amount of requests to send: %d
-- Concurrent request workers: %d
-- Verbosity: %d
-`, *_method, *_url, *_data, *_bearer, *_user, *_pass, *_host, *_headers, *_n, *_c, *_v)
+// buildRequest creates an http.Request based on the configuration
+func (c *Config) buildRequest() (*http.Request, error) {
+	var body io.Reader
+	if c.Data != "" {
+		body = strings.NewReader(c.Data)
+	}
 
-	// HTTP client config
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	req, err := http.NewRequest(c.Method, c.URL, body)
+	if err != nil {
+		return nil, err
+	}
 
+	// Add token/Auth
+	if c.Bearer != "" {
+		req.Header.Add("Authorization", "bearer "+c.Bearer)
+	}
+	if c.User != "" && c.Pass != "" {
+		req.SetBasicAuth(c.User, c.Pass)
+	}
+
+	// Add host
+	if c.Host != "" {
+		req.Host = c.Host
+	}
+
+	// Add headers
+	if c.Headers != "" {
+		headers := strings.Split(c.Headers, ";")
+		for _, h := range headers {
+			parts := strings.Split(h, ":")
+			if len(parts) > 1 {
+				req.Header.Add(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+			}
+		}
+	}
+
+	return req, nil
+}
+
+// Run starts the benchmark
+func (r *Runner) Run() {
 	// Init sync
 	var wg sync.WaitGroup
 	ch := make(chan int)
 
 	// Create workers
-	for i := 1; i <= *_c; i++ {
-		print(2, "Starting worker #%d", i)
+	for i := 1; i <= r.Config.C; i++ {
+		r.print(2, "Starting worker #%d", i)
 
 		wg.Add(1)
-		go worker(ch, i, &wg)
+		go r.worker(ch, i, &wg)
 	}
 
 	// Run
-	for i := 1; i <= *_n; i++ {
-		print(2, "Running request #%d", i)
+	for i := 1; i <= r.Config.N; i++ {
+		r.print(2, "Running request #%d", i)
 		ch <- i
 	}
 
@@ -72,70 +100,89 @@ func main() {
 	wg.Wait()
 }
 
-func worker(ch chan int, workerID int, wg *sync.WaitGroup) {
+func (r *Runner) worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	print(3, "Init Worker #%d", workerID)
+	r.print(3, "Init Worker #%d", workerID)
 	for i := range ch {
-		print(2, "Sending request #%d from Worker %d", i, workerID)
+		r.print(2, "Sending request #%d from Worker %d", i, workerID)
 
-		// Buffer data
-		var data *bytes.Buffer
-		if _data != nil {
-			data = bytes.NewBufferString(*_data)
-		}
-
-		// Create request
-		req, err := http.NewRequest(*_method, *_url, data)
+		req, err := r.Config.buildRequest()
 		if err != nil {
-			print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
-		}
-
-		// Add token/Auth
-		if *_bearer != "" {
-			req.Header.Add("Authorization", "bearer "+*_bearer)
-		}
-		if *_user != "" && *_pass != "" {
-			req.SetBasicAuth(*_user, *_pass)
-		}
-
-		// Add host
-		if *_host != "" {
-			req.Host = *_host
-		}
-
-		// Add headers
-		if *_headers != "" {
-			headers := strings.Split(*_headers, ";")
-			for _, h := range headers {
-				parts := strings.Split(h, ":")
-				if len(parts) > 1 {
-					req.Header.Add(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
-				}
-			}
+			r.print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			continue
 		}
 
 		// Request
 		start := time.Now()
-		resp, err := http.DefaultClient.Do(req)
-		end := time.Now()
+		resp, err := r.Client.Do(req)
 		if err != nil {
-			print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			r.print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			continue
 		}
+		end := time.Now()
+
 		body, err := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			r.print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			continue
 		}
-		print(3, "R#%d W#%d RESPONSE: %v \n%s", i, workerID, resp.StatusCode, string(body))
+		r.print(3, "R#%d W#%d RESPONSE: %v \n%s", i, workerID, resp.StatusCode, string(body))
 
 		delta := end.Sub(start)
-		print(1, "Request #%d took %+v and returned %d", i, delta, resp.StatusCode)
+		r.print(1, "Request #%d took %+v and returned %d", i, delta, resp.StatusCode)
 	}
 }
 
-func print(level int, line string, vars ...interface{}) {
-	if *_v >= level {
+func (r *Runner) print(level int, line string, vars ...interface{}) {
+	if r.Config.V >= level {
 		log.Printf(line, vars...)
 	}
+}
+
+func main() {
+	var config Config
+
+	// Parse config params
+	flag.StringVar(&config.URL, "url", "https://example.com", "Endpoint URL to request")
+	flag.StringVar(&config.Method, "method", "GET", "HTTP request method")
+	flag.StringVar(&config.Data, "data", "", "Raw body data as string")
+	flag.StringVar(&config.Bearer, "bearer", "", "Authorization bearer token")
+	flag.StringVar(&config.User, "user", "", "Basic Auth username")
+	flag.StringVar(&config.Pass, "pass", "", "Basic Auth password")
+	flag.StringVar(&config.Host, "host", "", "Value for the Host header to be sent in the request")
+	flag.StringVar(&config.Headers, "headers", "", "List of headers to send in the in the following format: Header1:Value1;Header2:Value2;HeaderN:ValueN")
+	flag.BoolVar(&config.Insecure, "insecure", false, "Allow invalid SSL/TLS certificates")
+	flag.IntVar(&config.N, "n", 1, "Amount of iterations")
+	flag.IntVar(&config.C, "c", 1, "Concurrent workers")
+	flag.IntVar(&config.V, "v", 1, "Verbosity level [0,1,2,3]")
+	flag.Parse()
+
+	log.Printf(`Starting goma with the following configuration:
+- HTTP method: %s
+- URL endpoint: %s
+- Data: %s
+- Bearer token: %s
+- BasicAuth: %s:%s
+- Host: %s
+- Headers: %s
+- Amount of requests to send: %d
+- Concurrent request workers: %d
+- Verbosity: %d
+`, config.Method, config.URL, config.Data, config.Bearer, config.User, config.Pass, config.Host, config.Headers, config.N, config.C, config.V)
+
+	// HTTP client config
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: config.Insecure},
+		},
+	}
+
+	runner := &Runner{
+		Config: &config,
+		Client: client,
+	}
+
+	runner.Run()
 }
