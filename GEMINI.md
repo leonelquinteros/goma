@@ -5,15 +5,16 @@ Goma is a lightweight, concurrent HTTP benchmarking and load-testing tool writte
 ## Project Overview
 
 - **Purpose:** Simple CLI tool for HTTP request performance testing.
-- **Language:** Go (1.23+ in `go.mod`).
+- **Language:** Go (1.23+).
 - **Core Dependencies:** Standard library (`net/http`, `sync`, `flag`, etc.).
 
 ## Architecture
 
-The project follows a simple worker-pool pattern:
-- **Main Thread:** Parses flags, initializes the shared channel, and spawns worker goroutines.
-- **Workers:** Listen on a shared channel for request IDs and perform HTTP requests.
-- **Synchronization:** Uses `sync.WaitGroup` to wait for all workers to complete and a channel to distribute tasks.
+The project follows a modular worker-pool pattern:
+- **Runner:** Manages the worker pool and `http.Client` lifecycle.
+- **Config:** Encapsulates benchmark parameters and request construction logic.
+- **Workers:** Concurrent goroutines that execute requests and log results.
+- **Synchronization:** Uses `sync.WaitGroup` and channels for task distribution.
 
 ## Core Features
 
@@ -21,7 +22,7 @@ The project follows a simple worker-pool pattern:
 - **Iterations:** Configurable total number of requests (`-n`).
 - **Authentication:** Supports Bearer tokens and Basic Auth.
 - **Customization:** Supports custom HTTP methods, headers, host overrides, and body data.
-- **Security:** Option to skip TLS verification (`-insecure`).
+- **Security:** Optional TLS verification skipping (`-insecure`).
 - **Verbosity:** Multiple logging levels (0-3).
 
 ## Development Workflow
@@ -31,25 +32,25 @@ The project follows a simple worker-pool pattern:
 go build -o goma main.go
 ```
 
+### Testing
+```bash
+go test -v ./...
+```
+
 ### Running
 ```bash
 ./goma -url https://example.com -c 10 -n 100
 ```
 
 ### CI/CD
-The project uses GitHub Actions for continuous integration, running builds, tests, and benchmarks on Ubuntu, Windows, and macOS. It is triggered on both `push` and `pull_request` events to the `master` branch.
-Location: `.github/workflows/ci.yml`
-
-## Project Status & Recommendations
-
-- **Testing:** Unit tests have been added in `main_test.go` to verify request creation, header parsing, and authentication configuration.
-- **Structure:** The code has been modularized into `Config` and `Runner` structs, separating CLI parsing from execution logic.
-- **Configuration:** A custom `http.Client` is now used, avoiding global modifications to `http.DefaultTransport`.
-- **Error Handling:** Errors are logged, and the benchmark continues. Future work could include tracking success/failure rates and providing a final summary.
-- **Dependencies:** Unused dependencies (like `delve`) have been removed from `go.mod`.
+GitHub Actions workflow runs builds, tests, and benchmarks on Ubuntu, Windows, and macOS. Triggered on `push` and `pull_request` to `master`.
 
 ## Key Files
-- `main.go`: Entry point and core logic.
-- `main_test.go`: Unit tests for core logic.
-- `go.mod`: Module definition and dependencies.
-- `README.md`: Usage instructions and examples.
+- `main.go`: Application entry point and core logic.
+- `main_test.go`: Unit tests for request construction and configuration.
+- `go.mod`: Module definition.
+- `README.md`: Public documentation and usage guide.
+
+## Future Improvements
+- **Result Aggregation:** Track success/failure rates and latency percentiles.
+- **Reporting:** Provide a final summary report upon benchmark completion.
