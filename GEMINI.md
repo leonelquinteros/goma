@@ -11,15 +11,17 @@ Goma is a lightweight, concurrent HTTP benchmarking and load-testing tool writte
 ## Architecture
 
 The project follows a modular worker-pool pattern:
-- **Runner:** Manages the worker pool and `http.Client` lifecycle.
+- **Runner:** Manages the worker pool, `http.Client` lifecycle, and result aggregation.
 - **Config:** Encapsulates benchmark parameters and request construction logic.
-- **Workers:** Concurrent goroutines that execute requests and log results.
-- **Synchronization:** Uses `sync.WaitGroup` and channels for task distribution.
+- **Workers:** Concurrent goroutines that execute requests and send results to a collection channel.
+- **Synchronization:** Uses `sync.WaitGroup` and channels for task distribution and result gathering.
 
 ## Core Features
 
 - **Concurrency:** Configurable number of workers (`-c`).
 - **Iterations:** Configurable total number of requests (`-n`).
+- **Reporting:** Automatic summary report with requests per second, min/max/avg latency, and status code distribution.
+- **Percentiles:** Detailed latency percentiles (P50, P90, P95, P99).
 - **Authentication:** Supports Bearer tokens and Basic Auth.
 - **Customization:** Supports custom HTTP methods, headers, host overrides, and body data.
 - **Security:** Optional TLS verification skipping (`-insecure`).
@@ -50,7 +52,3 @@ GitHub Actions workflow runs builds, tests, and benchmarks on Ubuntu, Windows, a
 - `main_test.go`: Unit tests for request construction and configuration.
 - `go.mod`: Module definition.
 - `README.md`: Public documentation and usage guide.
-
-## Future Improvements
-- **Result Aggregation:** Track success/failure rates and latency percentiles.
-- **Reporting:** Provide a final summary report upon benchmark completion.

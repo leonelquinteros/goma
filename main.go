@@ -3,10 +3,12 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -28,10 +30,18 @@ type Config struct {
 	V        int
 }
 
+// Result holds the information about a single HTTP request result
+type Result struct {
+	StatusCode int
+	Duration   time.Duration
+	Error      error
+}
+
 // Runner manages the execution of the benchmark
 type Runner struct {
-	Config *Config
-	Client *http.Client
+	Config  *Config
+	Client  *http.Client
+	results []Result
 }
 
 // buildRequest creates an http.Request based on the configuration
@@ -78,16 +88,18 @@ func (r *Runner) Run() {
 	// Init sync
 	var wg sync.WaitGroup
 	ch := make(chan int)
+	resCh := make(chan Result, r.Config.N)
 
 	// Create workers
 	for i := 1; i <= r.Config.C; i++ {
 		r.print(2, "Starting worker #%d", i)
 
 		wg.Add(1)
-		go r.worker(ch, i, &wg)
+		go r.worker(ch, resCh, i, &wg)
 	}
 
 	// Run
+	start := time.Now()
 	for i := 1; i <= r.Config.N; i++ {
 		r.print(2, "Running request #%d", i)
 		ch <- i
@@ -98,9 +110,18 @@ func (r *Runner) Run() {
 
 	// Wait for last requests to finish
 	wg.Wait()
+	totalDuration := time.Since(start)
+	close(resCh)
+
+	// Collect results
+	for res := range resCh {
+		r.results = append(r.results, res)
+	}
+
+	r.printSummary(totalDuration)
 }
 
-func (r *Runner) worker(ch chan int, workerID int, wg *sync.WaitGroup) {
+func (r *Runner) worker(ch chan int, resCh chan Result, workerID int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	r.print(3, "Init Worker #%d", workerID)
@@ -110,34 +131,107 @@ func (r *Runner) worker(ch chan int, workerID int, wg *sync.WaitGroup) {
 		req, err := r.Config.buildRequest()
 		if err != nil {
 			r.print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			resCh <- Result{Error: err}
 			continue
 		}
 
 		// Request
-		start := time.Now()
+		reqStart := time.Now()
 		resp, err := r.Client.Do(req)
 		if err != nil {
 			r.print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			resCh <- Result{Error: err}
 			continue
 		}
-		end := time.Now()
+		reqEnd := time.Now()
+		delta := reqEnd.Sub(reqStart)
 
 		body, err := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			r.print(0, "R#%d W#%d ERROR: %v", i, workerID, err.Error())
+			resCh <- Result{StatusCode: resp.StatusCode, Duration: delta, Error: err}
 			continue
 		}
 		r.print(3, "R#%d W#%d RESPONSE: %v \n%s", i, workerID, resp.StatusCode, string(body))
 
-		delta := end.Sub(start)
 		r.print(1, "Request #%d took %+v and returned %d", i, delta, resp.StatusCode)
+		resCh <- Result{StatusCode: resp.StatusCode, Duration: delta}
 	}
 }
 
 func (r *Runner) print(level int, line string, vars ...interface{}) {
 	if r.Config.V >= level {
 		log.Printf(line, vars...)
+	}
+}
+
+func (r *Runner) printSummary(totalDuration time.Duration) {
+	if len(r.results) == 0 {
+		fmt.Println("No results to summarize.")
+		return
+	}
+
+	var (
+		success   int
+		failed    int
+		totalTime time.Duration
+		minTime   = r.results[0].Duration
+		maxTime   time.Duration
+		durations []time.Duration
+	)
+
+	statusCodes := make(map[int]int)
+
+	for _, res := range r.results {
+		if res.Error != nil {
+			failed++
+		} else {
+			success++
+		}
+
+		if res.StatusCode > 0 {
+			statusCodes[res.StatusCode]++
+		}
+
+		totalTime += res.Duration
+		if res.Duration < minTime {
+			minTime = res.Duration
+		}
+		if res.Duration > maxTime {
+			maxTime = res.Duration
+		}
+		durations = append(durations, res.Duration)
+	}
+
+	sort.Slice(durations, func(i, j int) bool {
+		return durations[i] < durations[j]
+	})
+
+	p50 := durations[len(durations)*50/100]
+	p90 := durations[len(durations)*90/100]
+	p95 := durations[len(durations)*95/100]
+	p99 := durations[len(durations)*99/100]
+
+	fmt.Printf("\nSummary:\n")
+	fmt.Printf("  Total requests:        %d\n", len(r.results))
+	fmt.Printf("  Successful requests:   %d\n", success)
+	fmt.Printf("  Failed requests:       %d\n", failed)
+	fmt.Printf("  Total time:            %v\n", totalDuration)
+	fmt.Printf("  Average request time:  %v\n", totalTime/time.Duration(len(r.results)))
+	fmt.Printf("  Min request time:      %v\n", minTime)
+	fmt.Printf("  Max request time:      %v\n", maxTime)
+	fmt.Printf("  Requests per second:   %.2f\n", float64(len(r.results))/totalDuration.Seconds())
+
+	fmt.Printf("\nLatency Percentiles:\n")
+	fmt.Printf("  P50: %v\n", p50)
+	fmt.Printf("  P90: %v\n", p90)
+	fmt.Printf("  P95: %v\n", p95)
+	fmt.Printf("  P99: %v\n", p99)
+
+	fmt.Printf("\nStatus Codes:\n")
+	for code, count := range statusCodes {
+		fmt.Printf("  [%d] %d responses\n", code, count)
 	}
 }
 

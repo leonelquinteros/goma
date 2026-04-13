@@ -8,6 +8,9 @@
 ## Features
 
 - 🚀 **Concurrent execution:** Run benchmarks using a configurable number of worker goroutines.
+- 📊 **Detailed Summary:** Get a full report of total requests, successes, failures, and requests per second.
+- ⏱ **Latency Statistics:** Includes Average, Min, Max, and Percentiles (P50, P90, P95, P99).
+- 🔢 **Status Code Tracking:** See a breakdown of response status codes.
 - 🔐 **Authentication support:** Easily test endpoints requiring Bearer tokens or Basic Auth.
 - 🛠 **Customizable requests:** Support for custom HTTP methods, headers, host overrides, and body data.
 - 🛡 **Security:** Skip TLS verification for testing local or development environments.
