@@ -37,7 +37,7 @@ go build -o goma main.go
 ```
 
 ### CI/CD
-The project uses GitHub Actions for continuous integration, running builds, tests, and benchmarks on Ubuntu and Windows.
+The project uses GitHub Actions for continuous integration, running builds, tests, and benchmarks on Ubuntu, Windows, and macOS. It is triggered on both `push` and `pull_request` events to the `master` branch.
 Location: `.github/workflows/ci.yml`
 
 ## Project Status & Recommendations
@@ -50,5 +50,6 @@ Location: `.github/workflows/ci.yml`
 
 ## Key Files
 - `main.go`: Entry point and core logic.
+- `main_test.go`: Unit tests for core logic.
 - `go.mod`: Module definition and dependencies.
 - `README.md`: Usage instructions and examples.
