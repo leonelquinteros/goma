@@ -1,6 +1,38 @@
-# goma
+# goma 🦍
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/leonelquinteros/goma)](https://goreportcard.com/report/github.com/leonelquinteros/goma)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**Goma** is a lightweight, concurrent HTTP benchmarking and load-testing tool written in Go. It's designed for quick performance checks with a minimal footprint.
+
+## Features
+
+- 🚀 **Concurrent execution:** Run benchmarks using a configurable number of worker goroutines.
+- 🔐 **Authentication support:** Easily test endpoints requiring Bearer tokens or Basic Auth.
+- 🛠 **Customizable requests:** Support for custom HTTP methods, headers, host overrides, and body data.
+- 🛡 **Security:** Skip TLS verification for testing local or development environments.
+- 📊 **Verbosity levels:** From silent execution to full request/response logging.
+
+## Installation
+
+### From Source
+Ensure you have [Go](https://golang.org/dl/) installed (version 1.14 or later).
+
+```bash
+go install github.com/leonelquinteros/goma@latest
 ```
+
+Alternatively, clone and build locally:
+
+```bash
+git clone https://github.com/leonelquinteros/goma.git
+cd goma
+go build -o goma
+```
+
+## Usage
+
+```bash
 $ goma -h
 Usage of goma:
   -bearer string
@@ -27,30 +59,43 @@ Usage of goma:
     	Basic Auth username
   -v int
     	Verbosity level [0,1,2,3] (default 1)
-
 ```
 
+### Examples
+
+#### Basic benchmark
+Run 100 requests with 10 concurrent workers:
+```bash
+goma -url https://api.example.com/v1/health -c 10 -n 100
 ```
-$ goma -url https://example.com -c 2 -n 10
-2022/04/13 18:07:12 Starting goma with the following configuration:
-- HTTP method: GET
-- URL endpoint: https://example.com
-- Data:
-- Bearer token:
-- BasicAuth: :
-- Host:
-- Headers:
-- Amount of requests to send: 10
-- Concurrent request workers: 2
-- Verbosity: 1
-2022/04/13 18:07:13 Request #1 took 682.18652ms and returned 200
-2022/04/13 18:07:13 Request #2 took 682.126846ms and returned 200
-2022/04/13 18:07:13 Request #3 took 162.890907ms and returned 200
-2022/04/13 18:07:13 Request #4 took 162.918444ms and returned 200
-2022/04/13 18:07:13 Request #5 took 158.420312ms and returned 200
-2022/04/13 18:07:13 Request #6 took 164.258317ms and returned 200
-2022/04/13 18:07:14 Request #7 took 162.478389ms and returned 200
-2022/04/13 18:07:14 Request #8 took 163.041769ms and returned 200
-2022/04/13 18:07:14 Request #9 took 160.698955ms and returned 200
-2022/04/13 18:07:14 Request #10 took 162.163111ms and returned 200
+
+#### POST request with data and custom headers
+```bash
+goma -url https://api.example.com/v1/data \
+     -method POST \
+     -data '{"key": "value"}' \
+     -headers "Content-Type:application/json;X-Custom-Header:MyValue" \
+     -c 5 -n 20
 ```
+
+#### Testing with Bearer Authentication
+```bash
+goma -url https://api.example.com/v1/secure \
+     -bearer "your-auth-token-here" \
+     -n 10
+```
+
+## Development
+
+### Running Tests
+We maintain high quality with unit tests for our core logic. You can run them with:
+
+```bash
+go test -v ./...
+```
+
+### CI/CD
+The project uses GitHub Actions for continuous integration, automatically building and testing changes across multiple operating systems.
+
+## License
+Distributed under the MIT License. See `LICENSE` for more information.
